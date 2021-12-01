@@ -1,3 +1,4 @@
 archive.log
 *.zip
 /resources
+conf.ini
