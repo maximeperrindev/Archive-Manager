@@ -107,11 +107,12 @@ with zipfile.ZipFile(file_name, 'r') as zip_ref:
    nbDownload = 0
    same = False
    for fileName in listOfFileNames:
-       if fileName.split('/')[1] == file_conf['SQLFILE']:
+       print(fileName)
+       if fileName == file_conf['SQLFILE']:
            # Extract a single file from zip
             hash = hash_zip(zip_ref.open(fileName))
-            if os.path.isfile("./resources/"+ file_name.split('.')[0] +"/"+file_conf['SQLFILE']):
-                if hash == hash_file("./resources/"+ file_name.split('.')[0] +"/"+file_conf['SQLFILE']):
+            if os.path.isfile("./resources/"+file_conf['SQLFILE']):
+                if hash == hash_file("./resources/"+file_conf['SQLFILE']):
                     same = True
                     logger.error(file_conf['SQLFILE']+ " same as yesterday (hash: "+hash+")")
                 else:
@@ -137,39 +138,39 @@ try:
     client.verify = False # To not check SSL certificates (Default = True)
     client.mkdir('archive')
     logger.info("Connected !")
+    ## CHECK CONSERVATION TIME FOR .tgz FILES
+    expiration = datetime.today() - timedelta(days=int(server_conf['CONSERVATION_TIME']))
+    try:
+        logger.info('Checking for expired files...')
+        files = client.list("archive", get_info=True)
+        for file in files:
+            if file['content_type'] == 'application/x-gzip':
+                date_str = file['path'].split('/')[3].split('.')[0]
+                date_file = datetime.strptime(date_str, '%Y%d%m')
+                if date_file < expiration:
+                    path = file["path"].split('/')[0] + "/"+file["path"].split('/')[1]
+                    print(path)
+                    client.clean(path)
+                    logger.info(date_str+".tgz too old ! Deleting...")
+        logger.info('Folder is up to date !')
+    except:
+        logger.error("Error while checking for expired files")
+
+    ## CREATE .tgz FILE AND UPLOAD
+    if not same:
+        ## CREATE AAAADDMM.tgz FILE
+        today = datetime.today().strftime('%Y%d%m')
+        new_filename = today+".tgz"
+        make_tarfile("./resources/"+new_filename, "./resources/"+file_conf['SQLFILE'])
+        logger.info(new_filename+" file created in ./resources")
+        print(new_filename+" file created in ./resources")
+
+        ## UPLOAD .tgz ON SERVER
+        try:
+            client.upload_sync(remote_path="archive/"+new_filename, local_path="./resources/"+new_filename)
+            logger.info("Uploaded !")
+        except:
+            logger.error("Error while uploading data to server")
 except:
     logger.error("Error while connecting to server : " + server_conf['URL'])
 
-## CHECK CONSERVATION TIME FOR .tgz FILES
-expiration = datetime.today() - timedelta(days=int(server_conf['CONSERVATION_TIME']))
-try:
-    logger.info('Checking for expired files...')
-    files = client.list("archive", get_info=True)
-    for file in files:
-        if file['content_type'] == 'application/x-gzip':
-            date_str = file['path'].split('/')[3].split('.')[0]
-            date_file = datetime.strptime(date_str, '%Y%d%m')
-            if date_file < expiration:
-                path = file["path"].split('/')[2] + "/"+file["path"].split('/')[3]
-                print(path)
-                client.clean(path)
-                logger.info(date_str+".tgz too old ! Deleting...")
-    logger.info('Folder is up to date !')
-except:
-    logger.error("Error while checking for expired files")
-
-## CREATE .tgz FILE AND UPLOAD
-if not same:
-    ## CREATE AAAADDMM.tgz FILE
-    today = datetime.today().strftime('%Y%d%m')
-    new_filename = today+".tgz"
-    make_tarfile("./resources/"+new_filename, "./resources/file")
-    logger.info(new_filename+" file created in ./resources")
-    print(new_filename+" file created in ./resources")
-
-    ## UPLOAD .tgz ON SERVER
-    try:
-        client.upload_sync(remote_path="archive/"+new_filename, local_path="./resources/"+new_filename)
-        logger.info("Uploaded !")
-    except:
-        logger.error("Error while uploading data to server")
