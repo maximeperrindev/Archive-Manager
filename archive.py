@@ -9,7 +9,61 @@ import hashlib
 import tarfile
 from datetime import datetime, timedelta
 from webdav3.client import Client
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
 
+
+def send_success_mail(receiver):
+    try:
+        today = datetime.today().strftime('%H:%M')
+        conservation = server_conf["CONSERVATION_TIME"]
+        msg = MIMEMultipart()
+        msg['From'] = 'Archive Manager'
+        msg['To'] = receiver
+        msg['Subject'] = 'Notification : Archiving completed'
+        message = "Hello, \n The archiving of the file was completed at "+ today+". \n The operation was successful and will be repeated in "+ conservation +" days. \n See you soon"
+        msg.attach(MIMEText(message))
+        mailserver = smtplib.SMTP('smtp.gmail.com', 587)
+        mailserver.ehlo()
+        mailserver.starttls()
+        mailserver.ehlo()
+        mailserver.login(mail_conf['USERNAME'], mail_conf['PASSWORD'])
+        mailserver.sendmail(receiver, receiver, msg.as_string())
+        mailserver.quit()
+        print("Mail sent to "+receiver)
+    except:
+        print("Error while sending mail to "+ receiver)
+
+def send_error_mail(receiver):
+    try:
+        today = datetime.today().strftime('%H:%M')
+        conservation = server_conf["CONSERVATION_TIME"]
+        msg = MIMEMultipart()
+        msg['From'] = 'Archive Manager'
+        msg['To'] = receiver
+        with open("archive.log", "rb") as fil:
+            part = MIMEApplication(
+                fil.read(),
+                Name= os.path.basename('archive.log')
+            )
+        # After the file is closed
+        part['Content-Disposition'] = 'attachment; filename="%s"' % os.path.basename('archive.log')
+        msg['Subject'] = 'Notification : Error while archiving'
+        message = "Hello, \n The archiving of the file failed at "+ today+". \n The operation was unsuccessful and will be repeated in "+ conservation +" days. \n You can check the log report in attachment. \n See you soon"
+        msg.attach(MIMEText(message))
+        msg.attach(part)
+        mailserver = smtplib.SMTP('smtp.gmail.com', 587)
+        mailserver.ehlo()
+        mailserver.starttls()
+        mailserver.ehlo()
+        mailserver.login(mail_conf['USERNAME'], mail_conf['PASSWORD'])
+        mailserver.sendmail(receiver, receiver, msg.as_string())
+        mailserver.quit()
+        print("Mail sent to "+receiver)
+    except:
+        print("Error while sending mail to "+ receiver)
 def make_tarfile(output_filename, source_dir):
     with tarfile.open(output_filename, "w:gz") as tar:
         tar.add(source_dir, arcname=os.path.basename(source_dir))
@@ -72,12 +126,14 @@ def dowloadFileFromUrl(url):
     f.close()
     return file_name
 
-
+## SUCCESS VARIABLE
+success = False
 ## GET CONFIG
 config = configparser.ConfigParser()
 config.read('conf.ini')
 file_conf = config['FILE']
 server_conf = config['SERVER']
+mail_conf = config['MAIL']
 ## INSTANCE LOG FILE
 logger = logging.getLogger("archive")   # > set up a new name for a new logger
 
@@ -153,6 +209,7 @@ try:
                     client.clean(path)
                     logger.info(date_str+".tgz too old ! Deleting...")
         logger.info('Folder is up to date !')
+        success = True
     except:
         logger.error("Error while checking for expired files")
 
@@ -169,8 +226,19 @@ try:
         try:
             client.upload_sync(remote_path="archive/"+new_filename, local_path="./resources/"+new_filename)
             logger.info("Uploaded !")
+            success = True
         except:
+            success = False
             logger.error("Error while uploading data to server")
 except:
     logger.error("Error while connecting to server : " + server_conf['URL'])
 
+## SENDING MAILS
+mail_list = mail_conf['MAIL_LIST'].split(' ')
+if success:
+    for mail in mail_list:
+        send_success_mail(mail)
+
+else:
+    for mail in mail_list:
+        send_error_mail(mail)
