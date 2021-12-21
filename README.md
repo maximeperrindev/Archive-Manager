@@ -13,7 +13,7 @@
 	The utility is not set up and ready to work.
 
  - ### Launch
-	To launch Archive Manager, you have to install Python 3 => [tutorial here](https://realpython.com/installing-python/)
+	To launch Archive Manager, you have to install Python 3 => [tutorial here](https://realpython.com/installing-python/).
 	Now, you can run 	`python3 archive.py`
 	It will create :
 				- A file archive.log wich contains all logs related to the execution
