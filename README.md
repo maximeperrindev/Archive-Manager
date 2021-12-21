@@ -1,4 +1,10 @@
-# How to use it ?
+# Archive Manager
+
+## What is it ?
+
+Archive Manager is a tool developed in Python by [Maxime Perrin](https://maximeperrin.fr) to automatically manage the archiving of a compressed folder containing a SQL file.
+
+## How to use it ?
 
  - #### Installation
 	To install the utility on your computer or server, simply clone the git repository or download the project files.
