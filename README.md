@@ -38,7 +38,7 @@ Archive Manager is a tool developed in Python by [Maxime Perrin](https://maximep
 	`pip install -r requirements.txt`
 	If an error occurred, you may have not installed correctly all modules. Check if all dependencies are correctly installed.
 	
-	The utility is not set up and ready to work.
+	The utility is now set up and ready to work.
 
  - ### Launch
 	To launch Archive Manager, you have to install Python 3 => [tutorial here](https://realpython.com/installing-python/).
